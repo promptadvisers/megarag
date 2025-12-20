@@ -71,6 +71,14 @@ interface ProcessingResult {
 }
 
 /**
+ * Processing options for multi-tenancy support
+ */
+export interface ProcessingOptions {
+  workspace: string;
+  geminiApiKey?: string;
+}
+
+/**
  * Update document status in database
  */
 async function updateDocumentStatus(
@@ -330,8 +338,12 @@ export async function processDocument(
   documentId: string,
   filePath: string,
   fileType: string,
-  workspace: string = 'default'
+  options: ProcessingOptions | string = 'default'
 ): Promise<ProcessingResult> {
+  // Handle backwards compatibility
+  const workspace = typeof options === 'string' ? options : options.workspace;
+  // Note: geminiApiKey from options can be used in future for per-tenant processing
+  // Currently the processors use the default API key, but the infrastructure is in place
   await updateDocumentStatus(documentId, 'processing');
 
   let result: ProcessingResult;

@@ -1,27 +1,31 @@
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 import { GoogleAIFileManager, FileState } from '@google/generative-ai/server';
 import { AVAILABLE_MODELS } from './models';
+import {
+  getGeminiClient,
+  getModelFromClient,
+} from './factory';
 
-const apiKey = process.env.GOOGLE_AI_API_KEY;
-
-if (!apiKey) {
-  console.warn('GOOGLE_AI_API_KEY not set - Gemini features will not work');
-}
-
-// Initialize the Google Generative AI client
-const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
-
-// Initialize the File Manager for uploading large files (video/audio)
-const fileManager = apiKey ? new GoogleAIFileManager(apiKey) : null;
+// Re-export for convenience
+export { AVAILABLE_MODELS } from './models';
+export type { GeminiModelId } from './models';
+export { getGeminiClient, getDefaultClient, clearClientCache, FileState } from './factory';
 
 // Default model for processing (not user-configurable)
 const DEFAULT_PROCESSING_MODEL = 'gemini-2.0-flash';
 
-// Re-export models for convenience
-export { AVAILABLE_MODELS } from './models';
-export type { GeminiModelId } from './models';
+// Default API key from environment
+const defaultApiKey = process.env.GOOGLE_AI_API_KEY;
 
-// Gemini 2.0 Flash model for text generation, vision, video, and audio
+if (!defaultApiKey) {
+  console.warn('GOOGLE_AI_API_KEY not set - Gemini features will not work without per-tenant keys');
+}
+
+// Default instances for backward compatibility
+const genAI = defaultApiKey ? new GoogleGenerativeAI(defaultApiKey) : null;
+const fileManager = defaultApiKey ? new GoogleAIFileManager(defaultApiKey) : null;
+
+// Default models for backward compatibility
 export const geminiFlash: GenerativeModel | null = genAI
   ? genAI.getGenerativeModel({
       model: DEFAULT_PROCESSING_MODEL,
@@ -34,65 +38,76 @@ export const geminiFlash: GenerativeModel | null = genAI
     })
   : null;
 
-/**
- * Get a Gemini model by ID for chat responses
- */
-export function getModel(modelId: string): GenerativeModel | null {
-  if (!genAI) return null;
-
-  // Validate model ID or use default
-  const validModelId = modelId in AVAILABLE_MODELS ? modelId : 'gemini-2.5-flash';
-
-  return genAI.getGenerativeModel({
-    model: validModelId,
-    generationConfig: {
-      temperature: 0.7,
-      topP: 0.95,
-      topK: 40,
-      maxOutputTokens: 8192,
-    },
-  });
-}
-
-/**
- * Generate content with a specific model
- */
-export async function generateContentWithModel(
-  prompt: string,
-  modelId: string = 'gemini-2.5-flash'
-): Promise<string> {
-  const model = getModel(modelId);
-  if (!model) {
-    throw new Error('Gemini model not initialized');
-  }
-
-  const result = await model.generateContent(prompt);
-  return result.response.text();
-}
-
-// Gemini embedding model for vector embeddings (768 dimensions)
 export const geminiEmbedding: GenerativeModel | null = genAI
   ? genAI.getGenerativeModel({
       model: 'text-embedding-004',
     })
   : null;
 
-// Helper function to generate embeddings
-export async function generateEmbedding(text: string): Promise<number[]> {
-  if (!geminiEmbedding) {
-    throw new Error('Gemini embedding model not initialized');
+/**
+ * Get a Gemini model by ID for chat responses
+ * @param modelId - Model ID to use
+ * @param apiKey - Optional API key (uses default if not provided)
+ */
+export function getModel(modelId: string, apiKey?: string): GenerativeModel | null {
+  const key = apiKey || defaultApiKey;
+  if (!key) return null;
+
+  const client = getGeminiClient(key);
+  return getModelFromClient(client, modelId);
+}
+
+/**
+ * Generate content with a specific model
+ * @param prompt - The prompt to send
+ * @param modelId - Model ID to use
+ * @param apiKey - Optional API key (uses default if not provided)
+ */
+export async function generateContentWithModel(
+  prompt: string,
+  modelId: string = 'gemini-2.5-flash',
+  apiKey?: string
+): Promise<string> {
+  const model = getModel(modelId, apiKey);
+  if (!model) {
+    throw new Error('Gemini model not initialized - no API key available');
   }
 
-  const result = await geminiEmbedding.embedContent(text);
+  const result = await model.generateContent(prompt);
+  return result.response.text();
+}
+
+/**
+ * Generate embeddings for text
+ * @param text - Text to embed
+ * @param apiKey - Optional API key (uses default if not provided)
+ */
+export async function generateEmbedding(text: string, apiKey?: string): Promise<number[]> {
+  const key = apiKey || defaultApiKey;
+  if (!key) {
+    throw new Error('Gemini embedding model not initialized - no API key available');
+  }
+
+  const client = getGeminiClient(key);
+  const result = await client.embedding.embedContent(text);
   return result.embedding.values;
 }
 
-// Helper function to generate embeddings in batch
-export async function generateEmbeddingsBatch(texts: string[]): Promise<number[][]> {
-  if (!geminiEmbedding) {
-    throw new Error('Gemini embedding model not initialized');
+/**
+ * Generate embeddings for multiple texts in batch
+ * @param texts - Texts to embed
+ * @param apiKey - Optional API key (uses default if not provided)
+ */
+export async function generateEmbeddingsBatch(
+  texts: string[],
+  apiKey?: string
+): Promise<number[][]> {
+  const key = apiKey || defaultApiKey;
+  if (!key) {
+    throw new Error('Gemini embedding model not initialized - no API key available');
   }
 
+  const client = getGeminiClient(key);
   const embeddings: number[][] = [];
 
   // Process in batches of 100 to avoid rate limits
@@ -101,7 +116,7 @@ export async function generateEmbeddingsBatch(texts: string[]): Promise<number[]
     const batch = texts.slice(i, i + batchSize);
     const results = await Promise.all(
       batch.map(async (text) => {
-        const result = await geminiEmbedding.embedContent(text);
+        const result = await client.embedding.embedContent(text);
         return result.embedding.values;
       })
     );
@@ -111,25 +126,39 @@ export async function generateEmbeddingsBatch(texts: string[]): Promise<number[]
   return embeddings;
 }
 
-// Helper function to generate text content
-export async function generateContent(prompt: string): Promise<string> {
-  if (!geminiFlash) {
-    throw new Error('Gemini Flash model not initialized');
+/**
+ * Generate text content using Flash model
+ * @param prompt - The prompt to send
+ * @param apiKey - Optional API key (uses default if not provided)
+ */
+export async function generateContent(prompt: string, apiKey?: string): Promise<string> {
+  const key = apiKey || defaultApiKey;
+  if (!key) {
+    throw new Error('Gemini Flash model not initialized - no API key available');
   }
 
-  const result = await geminiFlash.generateContent(prompt);
-  const response = result.response;
-  return response.text();
+  const client = getGeminiClient(key);
+  const result = await client.flash.generateContent(prompt);
+  return result.response.text();
 }
 
-// Helper function for multimodal content (images, video, audio)
+/**
+ * Generate content with inline media (images, video, audio)
+ * @param prompt - The prompt to send
+ * @param mediaData - Array of media objects with mimeType and base64 data
+ * @param apiKey - Optional API key (uses default if not provided)
+ */
 export async function generateContentWithMedia(
   prompt: string,
-  mediaData: { mimeType: string; data: string }[]
+  mediaData: { mimeType: string; data: string }[],
+  apiKey?: string
 ): Promise<string> {
-  if (!geminiFlash) {
-    throw new Error('Gemini Flash model not initialized');
+  const key = apiKey || defaultApiKey;
+  if (!key) {
+    throw new Error('Gemini Flash model not initialized - no API key available');
   }
+
+  const client = getGeminiClient(key);
 
   const parts = [
     ...mediaData.map((media) => ({
@@ -141,23 +170,29 @@ export async function generateContentWithMedia(
     { text: prompt },
   ];
 
-  const result = await geminiFlash.generateContent(parts);
-  const response = result.response;
-  return response.text();
+  const result = await client.flash.generateContent(parts);
+  return result.response.text();
 }
 
 /**
  * Upload a file to Gemini's File API for processing
- * Used for large video/audio files that can't be sent inline
+ * @param buffer - File buffer
+ * @param mimeType - MIME type of the file
+ * @param displayName - Display name for the file
+ * @param apiKey - Optional API key (uses default if not provided)
  */
 export async function uploadFileToGemini(
   buffer: Buffer,
   mimeType: string,
-  displayName: string
+  displayName: string,
+  apiKey?: string
 ): Promise<{ uri: string; name: string }> {
-  if (!fileManager) {
-    throw new Error('Gemini File Manager not initialized');
+  const key = apiKey || defaultApiKey;
+  if (!key) {
+    throw new Error('Gemini File Manager not initialized - no API key available');
   }
+
+  const client = getGeminiClient(key);
 
   // Write buffer to temp file (required by the SDK)
   const fs = await import('fs');
@@ -171,7 +206,7 @@ export async function uploadFileToGemini(
     fs.writeFileSync(tempPath, buffer);
     console.log(`[Gemini] Uploading file: ${displayName}, size: ${buffer.length} bytes, mimeType: ${mimeType}`);
 
-    const uploadResult = await fileManager.uploadFile(tempPath, {
+    const uploadResult = await client.fileManager.uploadFile(tempPath, {
       mimeType,
       displayName,
     });
@@ -183,7 +218,7 @@ export async function uploadFileToGemini(
     while (file.state === FileState.PROCESSING) {
       console.log(`[Gemini] File still processing, waiting...`);
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      const getFileResult = await fileManager.getFile(file.name);
+      const getFileResult = await client.fileManager.getFile(file.name);
       file = getFileResult;
     }
 
@@ -206,29 +241,41 @@ export async function uploadFileToGemini(
 
 /**
  * Delete a file from Gemini's File API
+ * @param fileName - Name of the file to delete
+ * @param apiKey - Optional API key (uses default if not provided)
  */
-export async function deleteGeminiFile(fileName: string): Promise<void> {
-  if (!fileManager) {
-    throw new Error('Gemini File Manager not initialized');
+export async function deleteGeminiFile(fileName: string, apiKey?: string): Promise<void> {
+  const key = apiKey || defaultApiKey;
+  if (!key) {
+    throw new Error('Gemini File Manager not initialized - no API key available');
   }
 
-  await fileManager.deleteFile(fileName);
+  const client = getGeminiClient(key);
+  await client.fileManager.deleteFile(fileName);
 }
 
 /**
  * Generate content with a file uploaded to Gemini
+ * @param prompt - The prompt to send
+ * @param fileUri - URI of the uploaded file
+ * @param mimeType - MIME type of the file
+ * @param apiKey - Optional API key (uses default if not provided)
  */
 export async function generateContentWithFile(
   prompt: string,
   fileUri: string,
-  mimeType: string
+  mimeType: string,
+  apiKey?: string
 ): Promise<string> {
-  if (!geminiFlash) {
-    throw new Error('Gemini Flash model not initialized');
+  const key = apiKey || defaultApiKey;
+  if (!key) {
+    throw new Error('Gemini Flash model not initialized - no API key available');
   }
 
+  const client = getGeminiClient(key);
+
   // Put text prompt first, then file data
-  const result = await geminiFlash.generateContent([
+  const result = await client.flash.generateContent([
     { text: prompt },
     {
       fileData: {
@@ -241,4 +288,5 @@ export async function generateContentWithFile(
   return result.response.text();
 }
 
-export { genAI, fileManager, FileState };
+// Export default instances for backward compatibility
+export { genAI, fileManager };

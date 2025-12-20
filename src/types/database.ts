@@ -252,3 +252,125 @@ export interface SourceReferencesProps {
   sources: QueryResponse['sources'];
   onSourceClick?: (documentId: string) => void;
 }
+
+// ============================================
+// Organization / Multi-Tenant Types
+// ============================================
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  gemini_api_key_encrypted: string | null;
+  settings: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrganizationInsert {
+  id?: string;
+  name: string;
+  slug: string;
+  gemini_api_key_encrypted?: string;
+  settings?: Record<string, unknown>;
+}
+
+export interface ApiKey {
+  id: string;
+  org_id: string;
+  key_hash: string;
+  key_prefix: string;
+  name: string;
+  scopes: string[];
+  last_used_at: string | null;
+  expires_at: string | null;
+  created_at: string;
+  is_active: boolean;
+}
+
+export interface ApiKeyInsert {
+  id?: string;
+  org_id: string;
+  key_hash: string;
+  key_prefix: string;
+  name: string;
+  scopes?: string[];
+  expires_at?: string;
+}
+
+export interface UsageStats {
+  id: string;
+  org_id: string;
+  date: string;
+  api_requests: number;
+  llm_input_tokens: number;
+  llm_output_tokens: number;
+  embedding_requests: number;
+  storage_bytes: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UsageSummary {
+  total_api_requests: number;
+  total_llm_input_tokens: number;
+  total_llm_output_tokens: number;
+  total_embedding_requests: number;
+  total_storage_bytes: number;
+  daily_breakdown: Array<{
+    date: string;
+    api_requests: number;
+    llm_input_tokens: number;
+    llm_output_tokens: number;
+    embedding_requests: number;
+  }>;
+}
+
+export type AdminRole = 'owner' | 'admin' | 'viewer';
+
+export interface AdminUser {
+  id: string;
+  org_id: string;
+  email: string;
+  password_hash: string;
+  role: AdminRole;
+  created_at: string;
+  last_login_at: string | null;
+}
+
+export interface AdminUserInsert {
+  id?: string;
+  org_id: string;
+  email: string;
+  password_hash: string;
+  role?: AdminRole;
+}
+
+export interface AdminSession {
+  id: string;
+  user_id: string;
+  token_hash: string;
+  expires_at: string;
+  created_at: string;
+}
+
+// ============================================
+// API v1 Response Types
+// ============================================
+
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: {
+    code: 'UNAUTHORIZED' | 'FORBIDDEN' | 'NOT_FOUND' | 'RATE_LIMITED' | 'INVALID_REQUEST' | 'SERVER_ERROR';
+    message: string;
+    details?: Record<string, unknown>;
+  };
+  meta?: {
+    request_id: string;
+    usage?: {
+      input_tokens: number;
+      output_tokens: number;
+    };
+  };
+}

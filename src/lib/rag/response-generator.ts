@@ -12,6 +12,7 @@ export { DEFAULT_SYSTEM_PROMPT } from './constants';
 export interface ChatSettings {
   systemPrompt?: string | null;
   model?: string | null;
+  geminiApiKey?: string | null;
 }
 
 /**
@@ -123,7 +124,7 @@ export async function generateResponse(
   // Generate response using Gemini with selected model
   let response: string;
   try {
-    response = await generateContentWithModel(fullPrompt, modelId);
+    response = await generateContentWithModel(fullPrompt, modelId, settings?.geminiApiKey || undefined);
   } catch (error) {
     console.error('Error generating response:', error);
     response = "I encountered an error while generating a response. Please try again.";
@@ -187,7 +188,7 @@ export async function* streamResponse(
   const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
 
   try {
-    const response = await generateContentWithModel(fullPrompt, modelId);
+    const response = await generateContentWithModel(fullPrompt, modelId, settings?.geminiApiKey || undefined);
     yield { type: 'text', data: response };
   } catch (error) {
     yield { type: 'text', data: "Error generating response. Please try again." };
