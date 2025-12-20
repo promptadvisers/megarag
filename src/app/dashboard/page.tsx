@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { MessageSquare, RefreshCw, Microscope } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { DocumentUploader, DocumentList, ThemeToggle, DocumentListSkeleton } from '@/components';
+import { DocumentUploader, DocumentList, ThemeToggle, DocumentListSkeleton, Logo } from '@/components';
 import { toast } from 'sonner';
 import type { Document } from '@/types';
 
@@ -89,16 +89,19 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background animated-gradient">
       {/* Header */}
-      <header className="border-b">
+      <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">MegaRAG</h1>
-              <p className="text-sm text-muted-foreground">
-                Document Management & RAG System
-              </p>
+            <div className="flex items-center gap-3">
+              <Logo size="sm" showText={false} />
+              <div>
+                <h1 className="text-2xl font-bold">MegaRAG</h1>
+                <p className="text-sm text-muted-foreground">
+                  Multi-Modal RAG System
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <ThemeToggle />
@@ -127,8 +130,8 @@ export default function DashboardPage() {
       <main className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Upload */}
-          <div className="lg:col-span-1">
-            <Card>
+          <div className="lg:col-span-1 space-y-4">
+            <Card className="hover-lift animate-fade-in">
               <CardHeader>
                 <CardTitle>Upload Documents</CardTitle>
                 <CardDescription>
@@ -144,7 +147,7 @@ export default function DashboardPage() {
             </Card>
 
             {/* Stats Card */}
-            <Card className="mt-4">
+            <Card className="hover-lift animate-fade-in" style={{ animationDelay: '0.1s' }}>
               <CardHeader>
                 <CardTitle>Statistics</CardTitle>
               </CardHeader>
@@ -173,7 +176,7 @@ export default function DashboardPage() {
 
           {/* Right Column - Document List */}
           <div className="lg:col-span-2">
-            <Card>
+            <Card className="animate-fade-in" style={{ animationDelay: '0.15s' }}>
               <CardHeader>
                 <CardTitle>Documents</CardTitle>
                 <CardDescription>

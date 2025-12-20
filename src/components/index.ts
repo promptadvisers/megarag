@@ -9,3 +9,4 @@ export { ThemeToggle } from './ThemeToggle';
 export { ErrorBoundary, withErrorBoundary } from './ErrorBoundary';
 export { DocumentListSkeleton, StatsSkeleton, ChatMessageSkeleton } from './DocumentListSkeleton';
 export { DataExplorer } from './DataExplorer';
+export { Logo } from './Logo';

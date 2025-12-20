@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, FileStack, History, PanelLeftClose, PanelLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ChatInterface, ChatHistory, ThemeToggle } from '@/components';
+import { ChatInterface, ChatHistory, ThemeToggle, Logo } from '@/components';
 
 export default function ChatPage() {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -29,7 +29,7 @@ export default function ChatPage() {
   return (
     <div className="flex flex-col h-screen bg-background">
       {/* Header */}
-      <header className="flex-shrink-0 border-b">
+      <header className="flex-shrink-0 border-b bg-background/80 backdrop-blur-sm">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -41,10 +41,11 @@ export default function ChatPage() {
               >
                 {showSidebar ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
               </Button>
-              <Link href="/dashboard">
-                <Button variant="ghost" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Documents
+              <Link href="/dashboard" className="flex items-center gap-2">
+                <Logo size="sm" showText={false} />
+                <Button variant="ghost" size="sm" className="px-2">
+                  <ArrowLeft className="h-4 w-4 mr-1" />
+                  Back
                 </Button>
               </Link>
               <div className="h-6 w-px bg-border hidden sm:block" />
