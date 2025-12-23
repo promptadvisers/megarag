@@ -379,14 +379,16 @@ Most RAG systems only work with text documents. MegaRAG works with **everything*
 
 | File Type | What MegaRAG Does | How It Works |
 |-----------|-------------------|--------------|
-| **PDF** | Extracts text, tables, images | AI reads every page and describes visual content |
-| **Word (.docx)** | Extracts all text and formatting | Document parser extracts content |
-| **PowerPoint (.pptx)** | Extracts slide content | Each slide becomes searchable text |
-| **Excel (.xlsx)** | Extracts cell data | Tables converted to searchable text |
-| **Images** | Describes what's in the image | AI Vision analyzes the image: "A bar chart showing sales by region..." |
-| **Videos** | Analyzes video content over time | AI watches at intervals: "At 0:30, the speaker discusses..." |
-| **Audio** | Transcribes speech to text | AI listens and converts speech to searchable text |
-| **Text files** | Reads directly | Direct text extraction |
+| **PDF** | Extracts text, tables, images | Gemini File API reads every page natively |
+| **Word (.docx)** | Extracts all text and formatting | Gemini File API processes document directly |
+| **PowerPoint (.pptx)** | Extracts slide content | Gemini File API processes presentation directly |
+| **Excel (.xlsx)** | Extracts cell data | Gemini File API processes spreadsheet directly |
+| **Images** | Describes what's in the image | Gemini Vision analyzes the image: "A bar chart showing sales by region..." |
+| **Videos** | Analyzes video content over time | Gemini File API: "At 0:30, the speaker discusses..." |
+| **Audio** | Transcribes speech to text | Gemini File API transcribes audio to searchable text |
+| **Text files** | Reads directly | Direct text chunking |
+
+> **Note:** All document processing happens via Google's Gemini API - no external services needed!
 
 ---
 
