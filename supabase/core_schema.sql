@@ -110,6 +110,8 @@ CREATE TABLE IF NOT EXISTS chat_sessions (
     id VARCHAR(255) PRIMARY KEY,
     workspace VARCHAR(255) DEFAULT 'default',
     title VARCHAR(512) DEFAULT 'New Chat',
+    system_prompt TEXT,
+    model VARCHAR(100) DEFAULT 'gemini-2.5-flash',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -120,6 +122,8 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     role VARCHAR(50) NOT NULL,
     content TEXT NOT NULL,
     sources JSONB DEFAULT '[]'::jsonb,
+    entities JSONB DEFAULT '[]'::jsonb,
+    query_mode VARCHAR(50),
     metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

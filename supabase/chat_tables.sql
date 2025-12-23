@@ -1,17 +1,23 @@
+-- Chat Tables Migration
+-- NOTE: These tables are already included in core_schema.sql
+-- This file is kept for backwards compatibility / standalone chat setup
+
 -- Chat Sessions Table
-CREATE TABLE chat_sessions (
+CREATE TABLE IF NOT EXISTS chat_sessions (
     id VARCHAR(255) PRIMARY KEY,
     workspace VARCHAR(255) DEFAULT 'default',
-    title VARCHAR(512),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    title VARCHAR(512) DEFAULT 'New Chat',
+    system_prompt TEXT,
+    model VARCHAR(100) DEFAULT 'gemini-2.5-flash',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_chat_sessions_workspace ON chat_sessions(workspace);
-CREATE INDEX idx_chat_sessions_updated ON chat_sessions(updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_workspace ON chat_sessions(workspace);
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_updated ON chat_sessions(updated_at DESC);
 
 -- Chat Messages Table
-CREATE TABLE chat_messages (
+CREATE TABLE IF NOT EXISTS chat_messages (
     id VARCHAR(255) PRIMARY KEY,
     session_id VARCHAR(255) REFERENCES chat_sessions(id) ON DELETE CASCADE,
     role VARCHAR(50) NOT NULL, -- 'user' or 'assistant'
@@ -19,8 +25,9 @@ CREATE TABLE chat_messages (
     sources JSONB DEFAULT '[]'::jsonb,
     entities JSONB DEFAULT '[]'::jsonb,
     query_mode VARCHAR(50),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_chat_messages_session ON chat_messages(session_id);
-CREATE INDEX idx_chat_messages_created ON chat_messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_created ON chat_messages(created_at);
